@@ -41,7 +41,7 @@ function loadGis(): Promise<void> {
     s.onload = () => resolve();
     s.onerror = () => {
       gisLoading = null;
-      reject(new Error('Could not load Google sign-in. Are you offline?'));
+      reject(new Error('Couldn’t reach Google sign-in. Check your connection; calendar sync also needs the app’s own website, not an embedded preview.'));
     };
     document.head.appendChild(s);
   });

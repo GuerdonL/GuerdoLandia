@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 import { useStore } from '../store';
 import type { Tab } from '../App';
+import { ConfirmButton } from '../components/ConfirmButton';
 
 export function Settings({ go }: { go: (t: Tab) => void }) {
   const { googleClientId, setGoogleClientId, notifications, setNotifications, resetEverything } = useStore();
   const [clientId, setClientId] = useState(googleClientId);
   const [msg, setMsg] = useState('');
+  const [pasted, setPasted] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const enableNotifications = async (on: boolean) => {
@@ -26,15 +28,24 @@ export function Settings({ go }: { go: (t: Tab) => void }) {
     URL.revokeObjectURL(url);
   };
 
-  const importData = async (file: File) => {
+  // Downloads are blocked on some hosts, so the backup can also go through the clipboard.
+  const copyData = async () => {
     try {
-      const text = await file.text();
+      await navigator.clipboard.writeText(localStorage.getItem('guerdolandia') ?? '{}');
+      setMsg('Backup copied. Paste it into a note or email to keep it safe.');
+    } catch {
+      setMsg('Copying was blocked here. Select your backup another way, or try a different browser.');
+    }
+  };
+
+  const restore = (text: string) => {
+    try {
       const parsed = JSON.parse(text);
-      if (!parsed?.state) throw new Error('Not a GuerdoLandia backup');
+      if (!parsed?.state) throw new Error('That isn’t a GuerdoLandia backup.');
       localStorage.setItem('guerdolandia', text);
       location.reload();
     } catch (e) {
-      setMsg((e as Error).message);
+      setMsg(e instanceof SyntaxError ? 'That isn’t a GuerdoLandia backup.' : (e as Error).message);
     }
   };
 
@@ -78,19 +89,21 @@ export function Settings({ go }: { go: (t: Tab) => void }) {
         <h2>Your data</h2>
         <p className="hint">Everything lives on this device. Back it up or move it to another device with a file.</p>
         <div className="row gap wrap">
-          <button className="btn" onClick={exportData}>⬇ Export backup</button>
+          {/* The embedded (claude.ai) build can't start downloads; it uses Copy backup instead. */}
+          {!import.meta.env.VITE_EMBEDDED && <button className="btn" onClick={exportData}>⬇ Export backup</button>}
+          <button className="btn" onClick={copyData}>📋 Copy backup</button>
           <button className="btn" onClick={() => fileRef.current?.click()}>⬆ Import backup</button>
-          <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} />
+          <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0]?.text().then(restore)} />
           <a className="btn ghost" href="#gallery">🎞 Animation gallery</a>
-          <button
-            className="btn danger"
-            onClick={() => {
-              if (confirm('Erase your character, quests and calendar on this device?')) resetEverything();
-            }}
-          >
+          <ConfirmButton className="btn danger" onConfirm={resetEverything} confirmLabel="Tap again to erase everything">
             Reset everything
-          </button>
+          </ConfirmButton>
         </div>
+        <label className="field" htmlFor="restore-paste">
+          <span>Or paste a copied backup here to restore it</span>
+          <textarea id="restore-paste" rows={2} value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder='{"state": …}' />
+        </label>
+        {pasted.trim() && <button className="btn" onClick={() => restore(pasted)}>Restore pasted backup</button>}
       </section>
       {msg && <p className="toast-inline">{msg}</p>}
     </div>

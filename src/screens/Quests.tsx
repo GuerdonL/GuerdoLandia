@@ -3,6 +3,7 @@ import { useStore } from '../store';
 import { ACTIVITY_INFO, ALL_ACTIVITIES, classifyActivity, parseTarget } from '../game/classifier';
 import type { Activity, Quest } from '../types';
 import type { Tab } from '../App';
+import { ConfirmButton } from '../components/ConfirmButton';
 
 const EXAMPLES = ['Find 10 jobs to apply to', 'Finish the bookshelf project', 'Call mom', 'Deep clean the kitchen', 'Go for a 20 minute run', 'Read 3 chapters'];
 
@@ -193,15 +194,9 @@ function QuestItem({ q, go, onSchedule }: { q: Quest; go: (t: Tab) => void; onSc
         <button className="btn small ghost" onClick={() => setEditing(!editing)} aria-label="Edit">
           ✎
         </button>
-        <button
-          className="btn small ghost"
-          onClick={() => {
-            if (confirm(`Delete “${q.title}”?`)) deleteQuest(q.id);
-          }}
-          aria-label="Delete"
-        >
+        <ConfirmButton className="btn small ghost" onConfirm={() => deleteQuest(q.id)} confirmLabel="Tap to delete" ariaLabel="Delete">
           🗑
-        </button>
+        </ConfirmButton>
       </div>
     </li>
   );

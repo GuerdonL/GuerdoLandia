@@ -74,9 +74,21 @@ Note: Google blocks OAuth inside embedded WebViews, so Calendar sync does not wo
 the Capacitor build without adding a native Google sign-in plugin. Use the PWA if
 you need sync.
 
+## Hosted copy on claude.ai
+
+A single-file build runs as a private claude.ai page:
+
+```bash
+VITE_EMBEDDED=1 npm run build && python3 scripts/build-embedded.py guerdolandia.html
+```
+
+That host blocks Google sign-in, service workers and downloads. So Calendar sync,
+offline mode and Export are unavailable there; use **Copy backup** instead.
+
 ## Deploying (GitHub Pages)
 
-`.github/workflows/deploy.yml` builds and deploys on every push to `main`. Enable it
+`.github/workflows/deploy.yml` builds and deploys on every push to `main`. Pages on a
+private repository needs a paid GitHub plan; otherwise make the repo public. Enable it
 under **Settings → Pages → Source: GitHub Actions**. To bake in your client ID, you can
 optionally add a repository variable `GOOGLE_CLIENT_ID`.
 
