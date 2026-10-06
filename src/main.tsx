@@ -23,9 +23,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
           if (next.state === 'installed' && navigator.serviceWorker.controller) offer(next);
         });
       });
+      // Reload only when an update replaces a running version, not on the very first install.
+      const hadController = !!navigator.serviceWorker.controller;
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!reloaded) {
+        if (hadController && !reloaded) {
           reloaded = true;
           location.reload();
         }

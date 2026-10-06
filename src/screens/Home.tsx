@@ -18,7 +18,7 @@ export function Home({ go }: { go: (t: Tab) => void }) {
   const appearance = useStore((s) => s.appearance)!;
   const { stats, asleep, sick, health, mood, alerts } = useVitals();
   const activity = useCurrentActivity();
-  const { xp, level, timer, blocks, log, care, toggleSleep, setSick, startTimer } = useStore();
+  const { xp, level, timer, blocks, log, care, toggleSleep, setSick, startTimer, inventory, gold, useItem } = useStore();
   const now = useNow(timer ? 1000 : 30_000);
 
   const top = alerts[0];
@@ -124,6 +124,38 @@ export function Home({ go }: { go: (t: Tab) => void }) {
             {sick ? '💪 Feeling better' : '🤒 I feel unwell'}
           </button>
         </div>
+      </section>
+
+      <section className="card">
+        <div className="row between">
+          <h2>Bag</h2>
+          <span className="gold">🪙 {gold} gold</span>
+        </div>
+        {inventory.length === 0 ? (
+          <p className="hint">Complete a quest to win your first loot.</p>
+        ) : (
+          <ul className="bag-list">
+            {inventory.slice(0, 12).map((i) => (
+              <li key={i.id} className={i.usedAt ? 'used' : ''}>
+                <span className="bag-icon">{i.icon}</span>
+                <span>
+                  <span className="bag-name">{i.name}</span>
+                  <br />
+                  <span className="bag-sub">
+                    {i.rarity} · from “{i.questTitle}”{i.realWorld ? ` · real life: ${i.realWorld}` : ''}
+                  </span>
+                </span>
+                {i.effect && !i.usedAt ? (
+                  <button className="btn small" onClick={() => useItem(i.id)}>
+                    Use
+                  </button>
+                ) : (
+                  <span className="bag-sub">{i.usedAt ? 'used' : ''}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {log.length > 0 && (

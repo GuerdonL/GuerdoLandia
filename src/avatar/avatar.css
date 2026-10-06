@@ -160,3 +160,12 @@
   .avatar *, .avatar { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
 }
 .avatar.still, .avatar.still * { animation: none !important; }
+
+/* fight: adventurer stance, sword raised, shield up */
+.act-fight .body-bob { animation: av-bob 1.4s ease-in-out infinite; }
+.act-fight .arm-r { transform: rotate(-28deg); animation: guard-r 1.4s ease-in-out infinite; }
+.act-fight .arm-l { transform: rotate(-32deg); }
+@keyframes guard-r { 0%, 100% { transform: rotate(-28deg); } 50% { transform: rotate(-22deg); } }
+/* A strike plays once whenever the wrapper gets .striking */
+.striking .act-fight .arm-r { animation: sword-swing 0.45s ease-out 1; }
+@keyframes sword-swing { 0% { transform: rotate(-150deg); } 60% { transform: rotate(40deg); } 100% { transform: rotate(-28deg); } }

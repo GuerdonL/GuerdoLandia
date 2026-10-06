@@ -30,6 +30,36 @@ character acts out while you do them.
 
 Open `#gallery` (Settings → Animation gallery) to see every animation and mood.
 
+## The adventure
+
+Your character is an adventurer. When a quest's time block starts (or you tap
+**⚔️ Adventure now**), the hero heads to the quest's place in the fantasy world:
+
+- **Quest types**: desk work is a skirmish with paperwork goblins, meditation is the Shrine of
+  Stillness against restless wisps, cleaning is a cursed lair full of dust bunnies, and so on
+  (`src/adventure/archetypes.ts`). The offline classifier picks one; you can change it.
+- **👍 / 👎** at any time: a thumbs-up lands a blow, a thumbs-down lets the foe hit you.
+  Getting knocked down is fine: the hero takes a breath and stands back up.
+- **Progress slider** (steps of 10%) is your own estimate of how far through the real task you
+  are. Foes' HP tracks the work left: hits close part of the gap to that line but can't pass it.
+  At 100% every foe falls. Sliding back summons a reinforcement with HP x·(y−y′)/(1−y), where x
+  is the HP left at progress y and y′ is the new progress.
+- **🏆 Quest complete** is separate from the time block ending. It pays out the loot.
+- **Loot** is fixed when you write or edit the quest, from what finishing it gives you in real
+  life: money becomes gold, peace of mind a calming potion, a clean home a hearth charm.
+  It's found in a monster drop, a cave chest, a dragon's hoard and so on. Potions, food and
+  blessings can be used from the Bag to boost your needs.
+
+**AI helpers (optional, your own key)**: with a Claude API key in More → AI helpers, quests
+the classifier is unsure about, or any quest you tap **✨ Reimagine** on, are staged by Claude:
+it picks a quest type or invents a new scene, names the foes and the loot, and lists the
+animation labels the scene needs (`src/adventure/oracle.ts`). Labels are matched against the
+animation registry first (`src/adventure/animations.ts`), so "player-attack" reuses
+"hero-attack"; only genuinely new ones go to the image generator, and the frames are stored
+on the device (IndexedDB) so they are never generated twice. Image generation uses the free
+Pollinations service and is experimental: it sometimes refuses requests, and the built-in art
+is used then.
+
 ## Running it
 
 ```bash

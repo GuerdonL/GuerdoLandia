@@ -5,6 +5,7 @@ import { formatDuration, useNow, useVitals } from '../hooks';
 import { ACTIVITY_INFO } from '../game/classifier';
 import { ActivityPicker } from './Quests';
 import type { Activity } from '../types';
+import { Adventure } from '../adventure/Adventure';
 
 const PHASE_LABEL = { focus: 'Focus', shortBreak: 'Short break', longBreak: 'Long break' } as const;
 
@@ -16,6 +17,14 @@ export function Timer() {
   const now = useNow(250);
 
   if (!timer) return <TimerSetup />;
+
+  // Quest sessions play out as an adventure; plain focus timers keep the simple view.
+  if (timer.questId)
+    return (
+      <div className="screen timer">
+        <Adventure questId={timer.questId} />
+      </div>
+    );
 
   const remaining = timer.running && timer.endsAt ? timer.endsAt - now : timer.remainingMs;
   const progress = 1 - Math.max(0, remaining) / timer.totalMs;
@@ -87,7 +96,7 @@ function TimerSetup() {
   return (
     <div className="screen timer">
       <section className="card">
-        <h1>Focus timer</h1>
+        <h1>Set out on a quest</h1>
         <div className="timer-setup">
           <div className="setup-avatar">
             <Avatar appearance={appearance} activity={previewActivity} scene size="100%" />

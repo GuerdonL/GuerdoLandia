@@ -9,6 +9,7 @@ import { Timer } from './screens/Timer';
 import { Settings } from './screens/Settings';
 import { Gallery } from './components/Gallery';
 import { STAT_INFO } from './game/stats';
+import { LootReveal } from './adventure/LootReveal';
 
 export type Tab = 'home' | 'quests' | 'calendar' | 'timer' | 'creator' | 'settings';
 
@@ -16,7 +17,7 @@ const NAV: { id: Tab; label: string; icon: string }[] = [
   { id: 'home', label: 'Me', icon: '🏠' },
   { id: 'quests', label: 'Quests', icon: '📜' },
   { id: 'calendar', label: 'Calendar', icon: '📅' },
-  { id: 'timer', label: 'Timer', icon: '⏱️' },
+  { id: 'timer', label: 'Adventure', icon: '⚔️' },
   { id: 'settings', label: 'More', icon: '⚙️' },
 ];
 
@@ -50,6 +51,29 @@ export default function App() {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
+  }, []);
+
+  // When a scheduled block for a quest begins, the adventure starts on its own.
+  useEffect(() => {
+    const check = () => {
+      const s = useStore.getState();
+      if (s.timer || !s.appearance) return;
+      const now = Date.now();
+      const live = s.blocks.find(
+        (b) => b.questId && !s.autoStartedBlocks.includes(b.id) && new Date(b.start).getTime() <= now && new Date(b.end).getTime() > now + 60_000,
+      );
+      if (!live) return;
+      const quest = s.quests.find((q) => q.id === live.questId && !q.completedAt);
+      s.markAutoStarted(live.id);
+      if (!quest) return;
+      s.startTimer({ mode: 'block', blockId: live.id });
+      setTab('timer');
+      chime();
+      notify('⚔️ A quest begins!', `${quest.title} — your hero sets out.`);
+    };
+    check();
+    const id = setInterval(check, 15_000);
+    return () => clearInterval(id);
   }, []);
 
   // Chime + notify when a timer phase changes.
@@ -139,6 +163,7 @@ export default function App() {
         {tab === 'settings' && <Settings go={go} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
+      <LootReveal />
       {update && (
         <button className="toast update" onClick={() => update.postMessage('skipWaiting')}>
           ✨ A new version is ready. Tap to update

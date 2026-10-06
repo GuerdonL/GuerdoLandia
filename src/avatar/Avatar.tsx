@@ -7,9 +7,12 @@ import type { Activity, Appearance, Mood } from '../types';
 import { shade } from './options';
 import './avatar.css';
 
+/** 'fight' is the adventurer pose: sword in hand, shield up. */
+export type Pose = Activity | 'fight';
+
 interface Props {
   appearance: Appearance;
-  activity?: Activity;
+  activity?: Pose;
   mood?: Mood;
   size?: number | string;
   scene?: boolean;
@@ -29,8 +32,9 @@ const HEAD_DIMS = {
 const BUILD_WIDTH = { slim: 46, average: 56, broad: 68 } as const;
 const LEG_LENGTH = [30, 38, 46] as const;
 
-const SCENE_COLORS: Record<Activity, [string, string]> = {
+const SCENE_COLORS: Record<Pose, [string, string]> = {
   idle: ['#dff1ff', '#f5fbff'],
+  fight: ['#cfe3ff', '#f2f7ff'],
   desk: ['#e6e3ff', '#f6f5ff'],
   exercise: ['#ffe3d6', '#fff6f0'],
   build: ['#fbe8c8', '#fff8ec'],
@@ -89,7 +93,14 @@ export function Avatar({ appearance: a, activity = 'idle', mood = 'okay', size =
   };
 
   // Objects held in hands, drawn in hand-local coordinates (hand at 0,0).
-  const heldRight: Partial<Record<Activity, ReactNode>> = {
+  const heldRight: Partial<Record<Pose, ReactNode>> = {
+    fight: (
+      <g className="sword">
+        <rect x={-2.5} y={-2} width={5} height={10} rx={2} fill="#8a5a34" />
+        <rect x={-9} y={-4} width={18} height={4} rx={2} fill="#c9a06b" />
+        <path d="M-3.5 -4 L-3.5 -40 L0 -48 L3.5 -40 L3.5 -4 Z" fill="#dfe6ee" stroke="#9aa6b2" strokeWidth={1} />
+      </g>
+    ),
     build: (
       <g className="hammer">
         <rect x={-3} y={0} width={6} height={20} rx={2} fill="#8a5a34" />
@@ -109,7 +120,13 @@ export function Avatar({ appearance: a, activity = 'idle', mood = 'okay', size =
       </g>
     ),
   };
-  const heldLeft: Partial<Record<Activity, ReactNode>> = {
+  const heldLeft: Partial<Record<Pose, ReactNode>> = {
+    fight: (
+      <g className="shield">
+        <path d="M-14 -14 L14 -14 L14 2 Q14 16 0 22 Q-14 16 -14 2 Z" fill="#4a6fd6" stroke="#c9a06b" strokeWidth={3} />
+        <path d="M0 -10 L0 16 M-10 -2 L10 -2" stroke="#e0b04a" strokeWidth={2.5} />
+      </g>
+    ),
     walk: (
       <g>
         <path d="M-9 0 q9 -14 18 0" stroke="#8a5a34" strokeWidth={2.5} fill="none" />
@@ -362,7 +379,7 @@ export function Avatar({ appearance: a, activity = 'idle', mood = 'okay', size =
   );
 }
 
-function Scene({ activity }: { activity: Activity }) {
+function Scene({ activity }: { activity: Pose }) {
   const [c1, c2] = SCENE_COLORS[activity];
   const id = `sky-${activity}`;
   return (
@@ -662,7 +679,7 @@ function Nose({ a, cx, cy, skinDark }: { a: Appearance; cx: number; cy: number; 
   }
 }
 
-function Mouth({ a, cx, cy, mood, activity }: { a: Appearance; cx: number; cy: number; mood: Mood; activity: Activity }) {
+function Mouth({ a, cx, cy, mood, activity }: { a: Appearance; cx: number; cy: number; mood: Mood; activity: Pose }) {
   const y = cy + 32;
   const stroke = { stroke: '#7a3b30', strokeWidth: 2.5, fill: 'none', strokeLinecap: 'round' as const };
   if (activity === 'eat') return <ellipse className="chew" style={{ transformOrigin: `${cx}px ${y}px` }} cx={cx} cy={y} rx={6} ry={4} fill="#7a3b30" />;

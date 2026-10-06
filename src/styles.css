@@ -351,3 +351,5 @@ code { background: var(--bg); padding: 0 4px; border-radius: 4px; word-break: br
 .btn.confirming { background: var(--urgent); color: #fff; border-color: var(--urgent); }
 
 .toast.update { border: 0; cursor: pointer; font: inherit; font-weight: 700; background: var(--primary); color: var(--primary-ink); }
+.quest-edit { display: flex; flex-direction: column; gap: 6px; }
+.reward-field { margin: 10px 0 0; }

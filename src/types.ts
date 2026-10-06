@@ -1,5 +1,7 @@
 // Shared data model for the whole app.
 
+import type { QuestStaging, RewardSpec } from './adventure/types';
+
 export type Activity =
   | 'idle'
   | 'desk'
@@ -90,6 +92,14 @@ export interface Quest {
   focusMinutes: number;
   createdAt: string;
   completedAt?: string;
+  /** What finishing this gives you in real life, in your own words. */
+  rewardText?: string;
+  /** The in-game loot that stands for it, fixed when the quest is written or edited. */
+  reward?: RewardSpec;
+  /** How the quest is staged in the fantasy world. */
+  staging?: QuestStaging;
+  /** Self-reported progress, 0–100 in steps of 10. */
+  progressPct?: number;
 }
 
 export interface TimeBlock {

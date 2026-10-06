@@ -12,10 +12,45 @@ describe('quests', () => {
     const q = useStore.getState().addQuest('Find 10 jobs to apply to');
     expect(q).toMatchObject({ activity: 'desk', target: 10, progress: 0 });
     for (let i = 0; i < 10; i++) useStore.getState().stepQuest(q.id, 1);
-    const done = useStore.getState().quests[0];
-    expect(done.progress).toBe(10);
-    expect(done.completedAt).toBeDefined();
-    expect(useStore.getState().xp + useStore.getState().level).toBeGreaterThan(1);
+    const counted = useStore.getState().quests[0];
+    expect(counted.progress).toBe(10);
+    expect(counted.progressPct).toBe(100);
+    // Finishing the count doesn't end the quest; the Complete button does, and pays out loot.
+    expect(counted.completedAt).toBeUndefined();
+    useStore.getState().completeQuest(q.id);
+    const s2 = useStore.getState();
+    expect(s2.quests[0].completedAt).toBeDefined();
+    expect(s2.inventory[0]).toMatchObject({ questId: q.id });
+    expect(s2.lootReveal?.id).toBe(s2.inventory[0].id);
+    expect(s2.xp + s2.level).toBeGreaterThan(1);
+  });
+});
+
+describe('adventure', () => {
+  it('runs a fight through the store and grants loot that matches the reward', () => {
+    const s = useStore.getState();
+    const q = s.addQuest('Go to work', undefined, 'money');
+    expect(q.reward?.kind).toBe('gold');
+    s.heroStrike(q.id);
+    expect(useStore.getState().encounters[q.id].lastEvent?.type).toBe('glance');
+    s.setQuestProgress(q.id, 50);
+    s.heroStrike(q.id);
+    expect(useStore.getState().encounters[q.id].lastEvent?.type).toBe('hit');
+    s.setQuestProgress(q.id, 100);
+    expect(useStore.getState().encounters[q.id].status).toBe('cleared');
+    s.completeQuest(q.id);
+    expect(useStore.getState().gold).toBeGreaterThan(0);
+  });
+
+  it('uses consumable loot to restore needs', () => {
+    const s = useStore.getState();
+    const q = s.addQuest('Meditate', undefined, 'peace of mind');
+    s.completeQuest(q.id);
+    const item = useStore.getState().inventory[0];
+    const before = useStore.getState().stats.joy;
+    useStore.getState().useItem(item.id);
+    expect(useStore.getState().stats.joy).toBeGreaterThan(before);
+    expect(useStore.getState().inventory[0].usedAt).toBeDefined();
   });
 });
 

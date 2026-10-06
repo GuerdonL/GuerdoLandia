@@ -4,6 +4,8 @@ import { ACTIVITY_INFO, ALL_ACTIVITIES, classifyActivity, parseTarget } from '..
 import type { Activity, Quest } from '../types';
 import type { Tab } from '../App';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { ARCHETYPES, ARCHETYPE_FOR_ACTIVITY } from '../adventure/archetypes';
+import { builtInReward } from '../adventure/loot';
 
 const EXAMPLES = ['Find 10 jobs to apply to', 'Finish the bookshelf project', 'Call mom', 'Deep clean the kitchen', 'Go for a 20 minute run', 'Read 3 chapters'];
 
@@ -11,6 +13,7 @@ export function Quests({ go, onSchedule }: { go: (t: Tab) => void; onSchedule: (
   const quests = useStore((s) => s.quests);
   const addQuest = useStore((s) => s.addQuest);
   const [text, setText] = useState('');
+  const [rewardText, setRewardText] = useState('');
   const [override, setOverride] = useState<Activity | null>(null);
   const [showDone, setShowDone] = useState(false);
 
@@ -23,8 +26,9 @@ export function Quests({ go, onSchedule }: { go: (t: Tab) => void; onSchedule: (
 
   const submit = () => {
     if (!text.trim()) return;
-    addQuest(text, override ?? undefined);
+    addQuest(text, override ?? undefined, rewardText);
     setText('');
+    setRewardText('');
     setOverride(null);
   };
 
@@ -32,7 +36,7 @@ export function Quests({ go, onSchedule }: { go: (t: Tab) => void; onSchedule: (
     <div className="screen quests">
       <section className="card">
         <h1>Quests</h1>
-        <p className="hint">Type a life task in your own words. Your character will act it out while you do it.</p>
+        <p className="hint">Type a life task in your own words. It becomes a quest your hero takes on during its time blocks.</p>
         <form
           className="quest-input"
           onSubmit={(e) => {
@@ -51,14 +55,26 @@ export function Quests({ go, onSchedule }: { go: (t: Tab) => void; onSchedule: (
           </button>
         </form>
         {text.trim() && (
-          <div className="guess">
-            <span>
-              Animation: <strong>{ACTIVITY_INFO[activity].emoji} {ACTIVITY_INFO[activity].label}</strong>
-              {!override && guess.matched.length > 0 && <small> (from “{guess.matched.slice(0, 3).join('”, “')}”)</small>}
-            </span>
-            {target && <span className="pill">Counts to {target}</span>}
-            <ActivityPicker value={activity} onChange={setOverride} />
-          </div>
+          <>
+            <label className="field reward-field" htmlFor="new-reward">
+              <span>What will finishing it give you in real life? (optional)</span>
+              <input id="new-reward" value={rewardText} onChange={(e) => setRewardText(e.target.value)} placeholder="e.g. money, peace of mind, a clean kitchen" />
+            </label>
+            <div className="guess">
+              <span>
+                Quest: <strong>{questTypeLabel(activity)}</strong>
+                {!override && guess.matched.length > 0 && <small> (from “{guess.matched.slice(0, 3).join('”, “')}”)</small>}
+              </span>
+              {target && <span className="pill">Counts to {target}</span>}
+              <ActivityPicker value={activity} onChange={setOverride} />
+            </div>
+            <p className="hint">
+              Loot: {(() => {
+                const r = builtInReward(text, ARCHETYPE_FOR_ACTIVITY[activity], rewardText);
+                return `${r.icon} ${r.name}`;
+              })()}
+            </p>
+          </>
         )}
       </section>
 
@@ -99,12 +115,17 @@ export function Quests({ go, onSchedule }: { go: (t: Tab) => void; onSchedule: (
   );
 }
 
+/** "🧹 Cleansing (cleaning)": the fantasy quest type plus the real activity behind it. */
+export function questTypeLabel(a: Activity) {
+  return `${ACTIVITY_INFO[a].emoji} ${ARCHETYPES[ARCHETYPE_FOR_ACTIVITY[a]].name} (${ACTIVITY_INFO[a].label.toLowerCase()})`;
+}
+
 export function ActivityPicker({ value, onChange }: { value: Activity; onChange: (a: Activity) => void }) {
   return (
-    <select className="activity-picker" value={value} onChange={(e) => onChange(e.target.value as Activity)} aria-label="Animation">
+    <select className="activity-picker" value={value} onChange={(e) => onChange(e.target.value as Activity)} aria-label="Quest type">
       {ALL_ACTIVITIES.filter((a) => a !== 'idle').map((a) => (
         <option key={a} value={a}>
-          {ACTIVITY_INFO[a].emoji} {ACTIVITY_INFO[a].label}
+          {questTypeLabel(a)}
         </option>
       ))}
     </select>
@@ -112,36 +133,78 @@ export function ActivityPicker({ value, onChange }: { value: Activity; onChange:
 }
 
 function QuestItem({ q, go, onSchedule }: { q: Quest; go: (t: Tab) => void; onSchedule: (id: string) => void }) {
-  const { stepQuest, completeQuest, reopenQuest, deleteQuest, updateQuest, startTimer } = useStore();
+  const { stepQuest, completeQuest, reopenQuest, deleteQuest, updateQuest, startTimer, restageQuest, restageQuestWithAi } = useStore();
+  const hasAi = useStore((s) => !!s.ai.apiKey);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(q.title);
-  const info = ACTIVITY_INFO[q.activity];
+  const [reward, setReward] = useState(q.rewardText ?? '');
+  const [aiState, setAiState] = useState<{ busy: boolean; msg?: string }>({ busy: false });
+  const arch = q.staging ? ARCHETYPES[q.staging.archetype] : undefined;
+  const scene = q.staging?.customScene;
+
+  const reimagine = async () => {
+    setAiState({ busy: true });
+    try {
+      const { imagesFailed } = await restageQuestWithAi(q.id);
+      setAiState({
+        busy: false,
+        msg: imagesFailed
+          ? 'Reimagined ✨ The image service turned some pictures away, so built-in art stands in.'
+          : 'Reimagined ✨',
+      });
+    } catch (e) {
+      setAiState({ busy: false, msg: (e as Error).message });
+    }
+  };
 
   return (
     <li className={`card quest ${q.completedAt ? 'is-done' : ''}`}>
       <div className="quest-main">
-        <span className="quest-emoji" title={info.label}>
-          {info.emoji}
+        <span className="quest-emoji" title={arch?.name}>
+          {q.reward?.icon ?? ACTIVITY_INFO[q.activity].emoji}
         </span>
         <div className="quest-body">
           {editing ? (
             <form
-              className="row gap"
+              className="quest-edit"
               onSubmit={(e) => {
                 e.preventDefault();
                 const patch: Partial<Quest> = { title: title.trim() || q.title };
                 if (!q.activityLocked) patch.activity = classifyActivity(patch.title!).activity;
                 updateQuest(q.id, patch);
+                // Rewards are fixed when a quest is written or edited.
+                restageQuest(q.id, { rewardText: reward });
                 setEditing(false);
               }}
             >
-              <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
-              <button className="btn small">Save</button>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Quest" autoFocus />
+              <input value={reward} onChange={(e) => setReward(e.target.value)} aria-label="Real-life reward" placeholder="Real-life reward (e.g. money)" />
+              <div className="row gap wrap">
+                <ActivityPicker
+                  value={q.activity}
+                  onChange={(activity) => {
+                    updateQuest(q.id, { activity, activityLocked: true });
+                    restageQuest(q.id, { rewardText: reward, archetype: ARCHETYPE_FOR_ACTIVITY[activity] });
+                  }}
+                />
+                <button className="btn small primary">Save</button>
+              </div>
             </form>
           ) : (
             <div className="quest-title">{q.title}</div>
           )}
           <div className="quest-meta">
+            {arch && (
+              <span className="pill" title={scene?.setting ?? arch.place}>
+                ⚔️ {scene?.title ?? arch.name}
+                {q.staging?.source === 'ai' ? ' ✨' : ''}
+              </span>
+            )}
+            {q.reward && (
+              <span className="pill" title={q.reward.description}>
+                {q.reward.icon} {q.reward.name}
+              </span>
+            )}
             {q.target ? (
               <span className="counter">
                 <button className="round" onClick={() => stepQuest(q.id, -1)} aria-label="Decrease">
@@ -155,16 +218,10 @@ function QuestItem({ q, go, onSchedule }: { q: Quest; go: (t: Tab) => void; onSc
                 </button>
               </span>
             ) : null}
+            {!q.completedAt && (q.progressPct ?? 0) > 0 && <span className="pill">{q.progressPct}% done</span>}
             {q.focusMinutes > 0 && <span className="pill">⏱ {Math.round(q.focusMinutes)} min</span>}
-            {editing && (
-              <ActivityPicker value={q.activity} onChange={(activity) => updateQuest(q.id, { activity, activityLocked: true })} />
-            )}
           </div>
-          {q.target ? (
-            <div className="bar good thin">
-              <div style={{ width: `${(q.progress / q.target) * 100}%` }} />
-            </div>
-          ) : null}
+          {aiState.msg && <small className="muted">{aiState.msg}</small>}
         </div>
       </div>
       <div className="quest-actions">
@@ -177,18 +234,23 @@ function QuestItem({ q, go, onSchedule }: { q: Quest; go: (t: Tab) => void; onSc
                 go('timer');
               }}
             >
-              ▶ Focus
+              ⚔️ Adventure now
             </button>
             <button className="btn small" onClick={() => onSchedule(q.id)}>
               📅 Schedule
             </button>
             <button className="btn small" onClick={() => completeQuest(q.id)}>
-              ✓ Done
+              🏆 Complete
             </button>
           </>
         ) : (
           <button className="btn small" onClick={() => reopenQuest(q.id)}>
             ↺ Reopen
+          </button>
+        )}
+        {hasAi && !q.completedAt && (
+          <button className="btn small ghost" onClick={reimagine} disabled={aiState.busy}>
+            {aiState.busy ? 'Imagining…' : '✨ Reimagine'}
           </button>
         )}
         <button className="btn small ghost" onClick={() => setEditing(!editing)} aria-label="Edit">

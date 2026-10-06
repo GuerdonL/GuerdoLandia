@@ -4,7 +4,8 @@ import type { Tab } from '../App';
 import { ConfirmButton } from '../components/ConfirmButton';
 
 export function Settings({ go }: { go: (t: Tab) => void }) {
-  const { googleClientId, setGoogleClientId, notifications, setNotifications, resetEverything } = useStore();
+  const { googleClientId, setGoogleClientId, notifications, setNotifications, resetEverything, ai, setAi } = useStore();
+  const [apiKey, setApiKey] = useState(ai.apiKey);
   const [clientId, setClientId] = useState(googleClientId);
   const [msg, setMsg] = useState('');
   const [pasted, setPasted] = useState('');
@@ -75,6 +76,43 @@ export function Settings({ go }: { go: (t: Tab) => void }) {
         >
           Save
         </button>
+      </section>
+
+      <section className="card">
+        <h2>AI helpers (optional)</h2>
+        <p className="hint">
+          Quests are staged by built-in rules for free. With your own Claude API key, Claude can invent fitting scenes, foes and loot for
+          quests the rules aren’t sure about, or when you tap ✨ Reimagine. Each staging is one short request, usually a cent or two. Your key
+          and quest text go only from this device to Anthropic.
+        </p>
+        <label className="field" htmlFor="ai-key">
+          <span>Claude API key (from console.anthropic.com)</span>
+          <input id="ai-key" type="password" autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-ant-…" />
+        </label>
+        <label className="field" htmlFor="ai-model">
+          <span>Model</span>
+          <select id="ai-model" value={ai.model} onChange={(e) => setAi({ model: e.target.value })}>
+            <option value="claude-opus-5-5">Claude Opus 5.5 (best quality)</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (cheaper)</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 (cheapest)</option>
+          </select>
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={ai.imageGen} onChange={(e) => setAi({ imageGen: e.target.checked })} />
+          Experimental: generate pictures for new foes and new animations with the free Pollinations image service. It sometimes refuses requests; built-in art is used then. Images are made once, then kept on
+          this device. Only the foe or animation description is sent, and the pictures carry a small watermark.
+        </label>
+        <div className="row gap">
+          <button
+            className="btn primary"
+            onClick={() => {
+              setAi({ apiKey: apiKey.trim() });
+              setMsg(apiKey.trim() ? 'AI helpers are on. Tap ✨ Reimagine on a quest to try it.' : 'AI helpers are off.');
+            }}
+          >
+            Save
+          </button>
+        </div>
       </section>
 
       <section className="card">
