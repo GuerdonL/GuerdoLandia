@@ -2,7 +2,7 @@
 // Geometry is computed from the Appearance so every part lines up whatever
 // face shape, build or height was chosen; motion lives in avatar.css.
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useId, type CSSProperties, type ReactNode } from 'react';
 import type { Activity, Appearance, Mood } from '../types';
 import { shade } from './options';
 import './avatar.css';
@@ -537,21 +537,24 @@ function HeadwearShape({ a, cx, cy, rx, ry }: HeadProps) {
   const c = a.headwearColor;
   const L = cx - rx - 5;
   const R = cx + rx + 5;
-  const T = cy - ry - 8;
   const band = cy - ry * 0.35;
+  // The dome's peak must clear the hair, which reaches about cy - ry - 5.
+  // A cubic with both control points at height h peaks 3/4 of the way to h.
+  const T = cy - ry - 14;
+  const ctrl = band + (T - band) / 0.75;
   if (a.headwear === 'beanie')
     return (
       <g>
-        <circle cx={cx} cy={T - 6} r={9} fill={shade(c, 0.4)} />
-        <path d={`M${L} ${band} C${L} ${T} ${R} ${T} ${R} ${band} Z`} fill={c} />
+        <circle cx={cx} cy={T - 5} r={9} fill={shade(c, 0.4)} />
+        <path d={`M${L} ${band} C${L} ${ctrl} ${R} ${ctrl} ${R} ${band} Z`} fill={c} />
         <rect x={L - 1} y={band - 10} width={R - L + 2} height={14} rx={6} fill={shade(c, -0.18)} />
       </g>
     );
   return (
     <g>
-      <path d={`M${L + 2} ${band} C${L + 2} ${T} ${R - 2} ${T} ${R - 2} ${band} Z`} fill={c} />
+      <path d={`M${L + 2} ${band} C${L + 2} ${ctrl} ${R - 2} ${ctrl} ${R - 2} ${band} Z`} fill={c} />
       <path d={`M${cx - 10} ${band - 2} Q${cx + 40} ${band - 8} ${R + 22} ${band + 4} L${cx - 10} ${band + 4} Z`} fill={shade(c, -0.22)} />
-      <circle cx={cx} cy={T + 3} r={3} fill={shade(c, -0.3)} />
+      <circle cx={cx} cy={T + 2} r={3} fill={shade(c, -0.3)} />
     </g>
   );
 }
@@ -692,6 +695,7 @@ function Mouth({ a, cx, cy, mood, activity }: { a: Appearance; cx: number; cy: n
 
 function FacialHairBack({ a, cx, cy, rx, ry }: HeadProps) {
   const c = a.hairColor;
+  const clipId = useId();
   if (a.facialHair === 'beard')
     return (
       <path
@@ -701,7 +705,21 @@ function FacialHairBack({ a, cx, cy, rx, ry }: HeadProps) {
       />
     );
   if (a.facialHair === 'stubble')
-    return <path d={`M${cx - rx + 8} ${cy + 16} Q${cx} ${cy + ry + 14} ${cx + rx - 8} ${cy + 16} Q${cx} ${cy + 30} ${cx - rx + 8} ${cy + 16} Z`} fill={c} opacity={0.25} />;
+    // Shadow over the jaw, chin and upper lip, clipped to the face outline so it fits every face shape.
+    return (
+      <g>
+        <clipPath id={clipId}>
+          <FaceShapePath shape={a.faceShape} cx={cx} cy={cy} rx={rx} ry={ry} fill="#000" />
+        </clipPath>
+        <path
+          clipPath={`url(#${clipId})`}
+          d={`M${cx - rx - 2} ${cy + 8} Q${cx - rx * 0.5} ${cy + 30} ${cx - 12} ${cy + 25} Q${cx} ${cy + 22} ${cx + 12} ${cy + 25}
+              Q${cx + rx * 0.5} ${cy + 30} ${cx + rx + 2} ${cy + 8} L${cx + rx + 2} ${cy + ry + 10} L${cx - rx - 2} ${cy + ry + 10} Z`}
+          fill={c}
+          opacity={0.28}
+        />
+      </g>
+    );
   return null;
 }
 
