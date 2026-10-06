@@ -80,6 +80,13 @@ export default function App() {
     }
   }, [alerts, appearance?.name]);
 
+  const [update, setUpdate] = useState<ServiceWorker | null>(null);
+  useEffect(() => {
+    const onUpdate = (e: Event) => setUpdate((e as CustomEvent<ServiceWorker>).detail);
+    window.addEventListener('app-update', onUpdate);
+    return () => window.removeEventListener('app-update', onUpdate);
+  }, []);
+
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
     if (!celebrate || Date.now() - celebrate.at > 3000) return;
@@ -132,6 +139,11 @@ export default function App() {
         {tab === 'settings' && <Settings go={go} />}
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
+      {update && (
+        <button className="toast update" onClick={() => update.postMessage('skipWaiting')}>
+          ✨ A new version is ready. Tap to update
+        </button>
+      )}
       <nav className="bottom-nav">
         {NAV.map((n) => (
           <button key={n.id} className={tab === n.id || (n.id === 'settings' && tab === 'creator') ? 'active' : ''} onClick={() => go(n.id)}>

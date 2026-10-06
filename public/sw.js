@@ -1,9 +1,13 @@
 // Network-first for pages, cache-first for built assets, so the app works offline.
-const CACHE = 'guerdolandia-v1';
+const CACHE = 'guerdolandia-__BUILD_ID__';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon.svg'])));
-  self.skipWaiting();
+});
+
+// The page asks the new worker to take over once the person taps "Update".
+self.addEventListener('message', (e) => {
+  if (e.data === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {

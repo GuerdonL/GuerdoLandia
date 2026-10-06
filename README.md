@@ -87,10 +87,23 @@ offline mode and Export are unavailable there; use **Copy backup** instead.
 
 ## Deploying (GitHub Pages)
 
-`.github/workflows/deploy.yml` builds and deploys on every push to `main`. Pages on a
-private repository needs a paid GitHub plan; otherwise make the repo public. Enable it
-under **Settings → Pages → Source: GitHub Actions**. To bake in your client ID, you can
-optionally add a repository variable `GOOGLE_CLIENT_ID`.
+`.github/workflows/deploy.yml` runs the tests, builds and deploys on every push to `main`
+or the working branch. One-time setup: make the repo public (Pages on private repos needs
+a paid plan), then **Settings → Pages → Source: GitHub Actions**. The site is then at
+**https://guerdonl.github.io/GuerdoLandia/**.
+
+HTTPS is automatic on github.io and is what makes install, offline mode, notifications and
+Google sign-in possible. Notes:
+
+- Everything is loaded from the same site or over `https://`, so nothing gets blocked as
+  mixed content.
+- The build uses relative paths, so it works under the `/GuerdoLandia/` sub-path.
+- For Google Calendar, the authorized JavaScript origin is `https://guerdonl.github.io`
+  (no path, no trailing slash).
+- Each deploy gets its own service-worker cache. Open copies of the app show
+  "A new version is ready. Tap to update"; your saved data is untouched.
+- Saved data belongs to the `guerdonl.github.io` origin. Keep the same address, or move
+  data with Copy backup / restore.
 
 ## Code map
 
